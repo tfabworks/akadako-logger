@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AkaDakoロガー</title>
+<script src="https://699.jp/src/js/akadako.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: #f4f6fb;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: #333;
+}
+
+header {
+    background: #222;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+h1 {
+    color: #fff;
+    font-size: 20px;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(1.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.controls button {
+    background: #0099B0;
+    color: #fff;
+    border: none;
+}
+#connectBtn.connected {
+    background: #51CF66;
+}
+#startBtn.measuring {
+    background: #FF6B6B;
+}
+
+.interval-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.interval-group select {
+    padding: 6px 8px;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 4px;
+    font-size: 14px;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    cursor: pointer;
+}
+
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0 12px 12px 12px;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 12px;
+    background: #fff;
+}
+
+/* ---- Excel-style grid borders ---- */
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #E8F4FD;
+    color: #2B4570;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    border-top: 1px solid #b0cde0;
+    border-bottom: 2px solid #7CB9E8;
+    border-right: 1px solid #b0cde0;
+}
+
+thead th:first-child {
+    text-align: center;
+    min-width: 170px;
+    border-left: 1px solid #b0cde0;
+}
+
+thead th select {
+    padding: 5px 8px;
+    border: 1px solid #b0cde0;
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    max-width: 200px;
+}
+
+thead th select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.sensor-th {
+    white-space: nowrap;
+}
+
+.remove-col-btn {
+    background: #FF6B6B;
+    color: #fff;
+    border: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 15px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.remove-col-btn:hover:not(:disabled) {
+    filter: brightness(1.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.remove-col-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.add-col-th {
+    width: 44px;
+    min-width: 44px;
+}
+
+#addColBtn {
+    background: #4ECDC4;
+    color: #fff;
+    border: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 15px;
+    line-height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+tbody tr:nth-child(even) {
+    background: #f0f7ff;
+}
+
+tbody tr:nth-child(odd) {
+    background: #fff;
+}
+
+tbody td {
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 14px;
+    border-bottom: 1px solid #d0dbe8;
+    border-right: 1px solid #d0dbe8;
+    font-variant-numeric: tabular-nums;
+    color: #333;
+}
+
+tbody td:first-child {
+    border-left: 1px solid #d0dbe8;
+    white-space: nowrap;
+    font-size: 13px;
+    color: #666;
+}
+
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4ECDC4;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    box-shadow: 0 2px 10px rgba(78,205,196,0.3);
+}
+.toast.show {
+    opacity: 1;
+}
+
+/* hidden video/canvas for motion detection */
+#motionVideo, #motionCanvas {
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>AkaDakoロガー</h1>
+    <div class="controls">
+        <button id="connectBtn" onclick="handleConnect()">AkaDakoに接続</button>
+        <div class="interval-group">
+            <span>周期</span>
+            <select id="intervalSelect">
+                <option value="1000">1秒</option>
+                <option value="5000" selected>5秒</option>
+                <option value="10000">10秒</option>
+                <option value="15000">15秒</option>
+                <option value="30000">30秒</option>
+                <option value="60000">1分</option>
+                <option value="300000">5分</option>
+                <option value="600000">10分</option>
+                <option value="1800000">30分</option>
+                <option value="3600000">60分</option>
+            </select>
+        </div>
+        <button id="startBtn" disabled onclick="handleStartStop()">計測開始</button>
+        <button id="clearBtn" disabled onclick="handleClear()">消去</button>
+        <button id="copyBtn" disabled onclick="handleCopy()">コピー</button>
+        <button id="downloadBtn" disabled onclick="handleDownload()">ダウンロード</button>
+    </div>
+</header>
+
+<div class="table-container" id="tableContainer">
+    <table id="dataTable">
+        <thead>
+            <tr id="headerRow">
+                <th>日時</th>
+                <th class="sensor-th">
+                    <select class="sensor-select" disabled>
+                        <option value="brightness">明るさ(lx)</option>
+                    </select>
+                    <button class="remove-col-btn" disabled onclick="removeColumn(this)">−</button>
+                </th>
+                <th class="add-col-th">
+                    <button id="addColBtn" disabled onclick="addColumn()">＋</button>
+                </th>
+            </tr>
+        </thead>
+        <tbody id="dataBody"></tbody>
+    </table>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<video id="motionVideo" playsinline></video>
+<canvas id="motionCanvas"></canvas>
+
+<script>
+const SENSOR_OPTIONS = [
+    { label: '明るさ(lx)', key: 'brightness' },
+    { label: '温度(℃)', key: 'temperature' },
+    { label: '湿度(％)', key: 'humidity' },
+    { label: '気圧(hPa)', key: 'pressure' },
+    { label: '距離(cm)', key: 'distance' },
+    { label: '水温(°C)', key: 'waterTempA' },
+    { label: '加速度X(m/s^2)', key: 'accelX' },
+    { label: '加速度Y(m/s^2)', key: 'accelY' },
+    { label: '加速度Z(m/s^2)', key: 'accelZ' },
+    { label: '加速度絶対値(m/s^2)', key: 'accelMag' },
+    { label: 'ピッチ(°)', key: 'pitch' },
+    { label: 'ロール(°)', key: 'roll' },
+    { label: '音量', key: 'volume' },
+    { label: '動き', key: 'motion' },
+];
+
+let board = null;
+let measuring = false;
+let timerId = null;
+let dataRows = [];
+
+// Audio meter
+let audioCtx = null;
+let audioAnalyser = null;
+let audioDataArray = null;
+let audioStream = null;
+
+// Motion detector
+let motionVideo = null;
+let motionCanvas = null;
+let motionCtx = null;
+let motionPrevData = null;
+let motionValue = 0;
+let motionAnimId = null;
+let motionStream = null;
+
+// ---- Audio ----
+function getVolume() {
+    if (!audioAnalyser) return 0;
+    audioAnalyser.getByteTimeDomainData(audioDataArray);
+    let sum = 0;
+    for (let i = 0; i < audioDataArray.length; i++) {
+        const v = (audioDataArray[i] - 128) / 128;
+        sum += v * v;
+    }
+    const rms = Math.sqrt(sum / audioDataArray.length);
+    return Math.min(100, Math.round(rms * 300));
+}
+
+// ---- Motion ----
+function detectMotion() {
+    if (!motionVideo || motionVideo.readyState < 2) {
+        motionAnimId = requestAnimationFrame(detectMotion);
+        return;
+    }
+    motionCtx.drawImage(motionVideo, 0, 0, 160, 120);
+    const frame = motionCtx.getImageData(0, 0, 160, 120);
+    const data = frame.data;
+    if (motionPrevData) {
+        let totalDiff = 0;
+        const numPixels = 160 * 120;
+        for (let i = 0; i < data.length; i += 4) {
+            const g1 = (data[i] + data[i+1] + data[i+2]) / 3;
+            const g2 = (motionPrevData[i] + motionPrevData[i+1] + motionPrevData[i+2]) / 3;
+            totalDiff += Math.abs(g1 - g2);
+        }
+        const avgDiff = totalDiff / numPixels;
+        motionValue = Math.min(100, Math.round(avgDiff * 100 / 25));
+    }
+    motionPrevData = new Uint8ClampedArray(data);
+    motionAnimId = requestAnimationFrame(detectMotion);
+}
+
+function getMotion() {
+    return motionValue;
+}
+
+// ---- Media setup ----
+function setupAudioFromStream(stream) {
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        audioAnalyser = audioCtx.createAnalyser();
+        audioAnalyser.fftSize = 512;
+        source.connect(audioAnalyser);
+        audioDataArray = new Uint8Array(audioAnalyser.fftSize);
+    } catch (e) {
+        console.warn('オーディオ初期化エラー:', e);
+    }
+}
+
+function setupVideoFromStream(stream) {
+    try {
+        motionVideo = document.getElementById('motionVideo');
+        motionCanvas = document.getElementById('motionCanvas');
+        motionCanvas.width = 160;
+        motionCanvas.height = 120;
+        motionCtx = motionCanvas.getContext('2d', { willReadFrequently: true });
+        motionVideo.srcObject = stream;
+        motionVideo.play().then(() => {
+            motionAnimId = requestAnimationFrame(detectMotion);
+        });
+    } catch (e) {
+        console.warn('カメラ初期化エラー:', e);
+    }
+}
+
+async function setupMedia() {
+    // Try requesting both audio and video at once (single permission dialog)
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        setupAudioFromStream(new MediaStream(stream.getAudioTracks()));
+        setupVideoFromStream(new MediaStream(stream.getVideoTracks()));
+        return;
+    } catch (e) {
+        console.warn('マイク・カメラ同時取得に失敗、個別に取得します:', e);
+    }
+    // Fall back to requesting individually
+    try {
+        const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setupAudioFromStream(audioOnlyStream);
+    } catch (e) {
+        console.warn('マイクの使用が許可されませんでした:', e);
+    }
+    try {
+        const videoOnlyStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setupVideoFromStream(videoOnlyStream);
+    } catch (e) {
+        console.warn('カメラの使用が許可されませんでした:', e);
+    }
+}
+
+// ---- Sensor reading ----
+async function readSensor(key) {
+    try {
+        switch (key) {
+            case 'brightness':  return await board.fetchBrightness();
+            case 'temperature': return await board.fetchTemperature();
+            case 'humidity':    return await board.fetchHumidity();
+            case 'pressure':    return await board.fetchPressure();
+            case 'distance':    return await board.fetchOpticalDistance();
+            case 'waterTempA':  return await board.fetchWaterTemperatureA();
+            case 'accelX':      return await board.fetchAccelerationX();
+            case 'accelY':      return await board.fetchAccelerationY();
+            case 'accelZ':      return await board.fetchAccelerationZ();
+            case 'accelMag':    return await board.fetchAccelerationMagnitude();
+            case 'pitch':       return await board.fetchPitch();
+            case 'roll':        return await board.fetchRoll();
+            case 'volume':      return getVolume();
+            case 'motion':      return getMotion();
+            default:            return '';
+        }
+    } catch (e) {
+        console.warn('センサー読み取りエラー:', key, e);
+        return 'エラー';
+    }
+}
+
+// ---- UI helpers ----
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function getSensorSelects() {
+    return document.querySelectorAll('#headerRow .sensor-select');
+}
+
+function populateSensorSelect(sel) {
+    sel.innerHTML = '<option value="">-- 選択 --</option>';
+    SENSOR_OPTIONS.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.key;
+        opt.textContent = s.label;
+        sel.appendChild(opt);
+    });
+}
+
+function hasSensorSelected() {
+    const selects = getSensorSelects();
+    return Array.from(selects).some(s => s.value !== '');
+}
+
+function updateStartButton() {
+    const btn = document.getElementById('startBtn');
+    if (measuring) return; // don't change while measuring
+    btn.disabled = !board || !hasSensorSelected();
+    updateAddColButton();
+}
+
+function updateAddColButton() {
+    if (!board) return;
+    const selects = getSensorSelects();
+    const lastSelect = selects[selects.length - 1];
+    document.getElementById('addColBtn').disabled = !lastSelect || lastSelect.value === '';
+}
+
+function updateDataButtons() {
+    const hasData = dataRows.length > 0;
+    document.getElementById('clearBtn').disabled = !hasData;
+    document.getElementById('downloadBtn').disabled = !hasData;
+    document.getElementById('copyBtn').disabled = !hasData;
+}
+
+function setConnectedUI(connected) {
+    const btn = document.getElementById('connectBtn');
+    if (connected) {
+        btn.textContent = 'AkaDakoに接続中';
+        btn.classList.add('connected');
+        btn.disabled = true;
+        getSensorSelects().forEach(s => s.disabled = false);
+    } else {
+        btn.textContent = 'AkaDakoに接続';
+        btn.classList.remove('connected');
+        btn.disabled = false;
+        document.getElementById('addColBtn').disabled = true;
+        getSensorSelects().forEach(s => s.disabled = true);
+        if (measuring) stopMeasurement();
+    }
+    updateStartButton();
+    updateAddColButton();
+    updateRemoveButtons();
+    updateDataButtons();
+}
+
+// ---- Connect ----
+async function handleConnect() {
+    const btn = document.getElementById('connectBtn');
+    btn.disabled = true;
+    btn.textContent = '接続中...';
+
+    // Request media permissions and AkaDako connection in parallel
+    const [mediaResult, connectResult] = await Promise.allSettled([
+        setupMedia(),
+        AkaDako.connect()
+    ]);
+
+    if (connectResult.status === 'fulfilled') {
+        board = connectResult.value;
+        board.onDisconnected(() => {
+            board = null;
+            setConnectedUI(false);
+            showToast('AkaDakoが切断されました');
+        });
+        setConnectedUI(true);
+        showToast('接続しました');
+    } else {
+        console.error('接続エラー:', connectResult.reason);
+        btn.disabled = false;
+        btn.textContent = 'AkaDakoに接続';
+        showToast('接続に失敗しました');
+    }
+}
+
+// ---- Measurement ----
+function formatDateTime(d) {
+    const pad = (n, len = 2) => String(n).padStart(len, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+async function takeMeasurement() {
+    const selects = getSensorSelects();
+    const now = new Date();
+    const row = { datetime: formatDateTime(now), values: [] };
+
+    for (const sel of selects) {
+        if (sel.value) {
+            const val = await readSensor(sel.value);
+            row.values.push(typeof val === 'number' ? Math.round(val * 100) / 100 : val);
+        } else {
+            row.values.push('');
+        }
+    }
+    dataRows.push(row);
+    appendTableRow(row);
+    updateDataButtons();
+
+    // Auto-scroll to bottom
+    const container = document.getElementById('tableContainer');
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendTableRow(row) {
+    const tbody = document.getElementById('dataBody');
+    const tr = document.createElement('tr');
+    const tdDate = document.createElement('td');
+    tdDate.textContent = row.datetime;
+    tr.appendChild(tdDate);
+
+    row.values.forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v !== '' && v !== undefined ? v : '';
+        tr.appendChild(td);
+    });
+
+    // Empty cell for the "+" column
+    const tdPlus = document.createElement('td');
+    tr.appendChild(tdPlus);
+
+    tbody.appendChild(tr);
+}
+
+function restartTimer() {
+    if (timerId) clearInterval(timerId);
+    const interval = parseInt(document.getElementById('intervalSelect').value);
+    timerId = setInterval(() => {
+        takeMeasurement();
+    }, interval);
+}
+
+function startMeasurement() {
+    measuring = true;
+    const btn = document.getElementById('startBtn');
+    btn.textContent = '計測停止';
+    btn.classList.add('measuring');
+
+    // Take first measurement immediately
+    takeMeasurement();
+    restartTimer();
+}
+
+function stopMeasurement() {
+    measuring = false;
+    if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+    }
+    const btn = document.getElementById('startBtn');
+    btn.textContent = '計測開始';
+    btn.classList.remove('measuring');
+}
+
+function handleStartStop() {
+    if (measuring) {
+        stopMeasurement();
+    } else {
+        startMeasurement();
+    }
+}
+
+// ---- Add / Remove column ----
+function updateRemoveButtons() {
+    const sensorThs = document.querySelectorAll('#headerRow .sensor-th');
+    const canRemove = sensorThs.length >= 2 && board;
+    sensorThs.forEach(th => {
+        const btn = th.querySelector('.remove-col-btn');
+        if (btn) btn.disabled = !canRemove;
+    });
+}
+
+function addColumn() {
+    const headerRow = document.getElementById('headerRow');
+    const addTh = headerRow.querySelector('.add-col-th');
+
+    const th = document.createElement('th');
+    th.className = 'sensor-th';
+    const sel = document.createElement('select');
+    sel.className = 'sensor-select';
+    populateSensorSelect(sel);
+    sel.addEventListener('change', () => updateStartButton());
+    th.appendChild(sel);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-col-btn';
+    removeBtn.textContent = '−';
+    removeBtn.onclick = function() { removeColumn(this); };
+    th.appendChild(removeBtn);
+
+    headerRow.insertBefore(th, addTh);
+
+    // Add empty cell to each existing data row
+    const tbody = document.getElementById('dataBody');
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(tr => {
+        const td = document.createElement('td');
+        td.textContent = '';
+        const lastTd = tr.lastElementChild;
+        tr.insertBefore(td, lastTd);
+    });
+
+    dataRows.forEach(row => row.values.push(''));
+    updateRemoveButtons();
+    updateAddColButton();
+}
+
+function removeColumn(btn) {
+    const th = btn.closest('.sensor-th');
+    const headerRow = document.getElementById('headerRow');
+    const sensorThs = Array.from(headerRow.querySelectorAll('.sensor-th'));
+    const colIndex = sensorThs.indexOf(th);
+    if (colIndex === -1) return;
+
+    th.remove();
+
+    // Remove corresponding td from each data row (colIndex+1 because first td is datetime, last td is "+" placeholder)
+    const tbody = document.getElementById('dataBody');
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        const targetTd = tds[colIndex + 1]; // +1 for datetime column
+        if (targetTd) targetTd.remove();
+    });
+
+    // Remove from dataRows
+    dataRows.forEach(row => row.values.splice(colIndex, 1));
+
+    updateRemoveButtons();
+    updateStartButton();
+}
+
+// ---- Clear ----
+function handleClear() {
+    dataRows = [];
+    document.getElementById('dataBody').innerHTML = '';
+    updateDataButtons();
+    if (!measuring) {
+        const btn = document.getElementById('startBtn');
+        btn.textContent = '計測開始';
+        btn.classList.remove('measuring');
+    }
+}
+
+// ---- Data export ----
+function generateDelimited(delimiter) {
+    const selects = getSensorSelects();
+    const headers = ['日時'];
+    selects.forEach(sel => {
+        const opt = sel.options[sel.selectedIndex];
+        headers.push(sel.value ? opt.textContent : '');
+    });
+
+    let text = headers.join(delimiter) + '\n';
+    dataRows.forEach(row => {
+        const line = [row.datetime, ...row.values].join(delimiter);
+        text += line + '\n';
+    });
+    return text;
+}
+
+function handleDownload() {
+    const csv = generateDelimited(',');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    a.download = `akadako_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('CSVをダウンロードしました');
+}
+
+async function handleCopy() {
+    const tsv = generateDelimited('\t');
+    try {
+        await navigator.clipboard.writeText(tsv);
+        showToast('クリップボードにコピーしました（TSV）');
+    } catch (e) {
+        showToast('コピーに失敗しました');
+    }
+}
+
+// ---- Init ----
+(function init() {
+    // Populate the initial sensor select
+    const selects = getSensorSelects();
+    selects.forEach(sel => {
+        populateSensorSelect(sel);
+        sel.value = 'brightness';
+        sel.addEventListener('change', () => updateStartButton());
+    });
+    updateDataButtons();
+
+    // Restart timer immediately when interval changes during measurement
+    document.getElementById('intervalSelect').addEventListener('change', () => {
+        if (measuring) restartTimer();
+    });
+})();
+</script>
+
+</body>
+</html>
